@@ -1,58 +1,55 @@
 import read as d
+import sample as sa
 import nltk
 import numpy
 
 
 filename = 'questions.csv'
+#filename = 'medium.csv'
+sam_size = 100000 # Grabs this many positive and negative sample points randomly
 
 
 def runBLEU(field, data):
-	# Cumulative error
-	error = 0
-
 	# Types of characters to ignore
 	ignore = ';:.\'",?<>-=_+[]{}'
 
 	# Output file for BLEU run
-	#output = open('outputBLEU' + str(threshold) + '.out', 'w')
+	#output = open('outputNeg.out', 'w')
+	#outputp = open('outputPos.out', 'w')
 
 	l = len(data)
 	x = [0] * l 
 	i = 0
-	err = [0] * 100
-	for line in data:
-		var1 = line[field[3]].translate(None, ignore).split()
-		var2 = line[field[4]].translate(None, ignore).split()
 
-		#print line[field[3]]
-		BLEUscore = nltk.translate.bleu_score.sentence_bleu([var1], var2)
+	#Store error for each kind of 
+	err = [0] * 101
+
+	for line in data:
+		q1 = line[field[3]].translate(None, ignore).split()
+		q2 = line[field[4]].translate(None, ignore).split()
+
+		BLEUscore = nltk.translate.bleu_score.sentence_bleu([q1], q2)
 		x[i] = BLEUscore
 
-		for j in range(0,100):
+		label = (int(float(line[field[5]])))
+		
+		for j in range(0,101):
 			threshold = float(j) / 100
+			# If the BLEUscore is higher than the threshold, then we assume that
+			# the questions are a match
 			classified = int(BLEUscore > threshold)
-			if ((int(float(line[field[5]])) != classified)):
+			
+			if (label != classified):
+#				print 'error at:' + str(line[field[5]]) + ', ' + str(classified) + ', ' + str(BLEUscore) + ', thr=' + str(threshold)
 				err[j] = err[j] + 1
+#			else:
+#				print 'no-error at:' + str(line[field[5]]) + ', ' + str(classified) + ', ' + str(BLEUscore) + ', thr=' + str(threshold)
 		i = i + 1
-#		classified = int(BLEUscore - threshold + 1)
-#
-#		#print int(float(line[field[5]])) == classified
-#		if ((int(float(line[field[5]])) != classified)):
-#			error = error + 1
-#
-#	print 'Error = ' + str(float(error) / len(data)) + ' for threshold ' + str(threshold)
-#	output.write('Error rate:\n' + str(float(error) / len(data)))
-#	output.write('\n\nAccuracy:\n' + str(1 - float(error) / len(data)))
-#	output.close()
-	print 'Error'
-	print err
-	print
-	print 'Max Bleu Score'
-	print max(x)
 
-	print numpy.mean(x)
-	return x
 
+	return x, err
+
+"""
 def calculateError(threshold, bleuscores, data, field):
 	error = 0
 	i = 0
@@ -62,38 +59,14 @@ def calculateError(threshold, bleuscores, data, field):
 		i = i + 1
 
 	return error
-
-
-
-#Threshold, everything above will be classified as 1 and below as 0
-threshold = 0
+"""
 
 field, data = d.readData(filename);
-scores = runBLEU(field, data)
-#print scores
-# field[3] is question1, field[4] is question2, field[5] is the class
-#for i in range(0,100):
-#	threshold = float(i) / 100
-
-x = [0] * 100
-
-print 'Calculating error'
-
-for i in range(0,100):
-	threshold = float(i) / 100
-	x[i] = calculateError(threshold, scores, data, field)
-	print i
-	
-print x
-
-
-
-
-
-
-
-
-
-
+print 'Loaded data'
+sampled = sa.sample50_50(data, field, sam_size)
+print 'Sampled data'
+scores, err = runBLEU(field, sampled)
+for i in range(0, len(err)):
+	print str(i) + ',' + str(float(err[i]) / (2 * sam_size))
 
 
